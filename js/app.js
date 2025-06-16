@@ -43,14 +43,14 @@ async function initializeApp() {
   
   // Check for redirect response
   try {
-    const response = await auth.handleRedirectResponse();
-    if (response) {
-      console.log("Successful authentication response received");
-      await updateUserState();
-    } else {
-      // Check if user is already signed in
+    // const response = await auth.handleResponse();
+    // if (response) {
+    //   console.log("Successful authentication response received");
+    //   await updateUserState();
+    // } else {
+    //   // Check if user is already signed in
       await checkExistingAuth();
-    }
+    // }
   } catch (error) {
     console.error("Error handling redirect:", error);
     ui.showError("Authentication error");
