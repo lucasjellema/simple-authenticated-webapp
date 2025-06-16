@@ -25,7 +25,15 @@ const DOM_ELEMENTS = {
   apiData: document.getElementById('api-data'),
   apiUserData: document.getElementById('api-user-data'),
   dataStatus: document.getElementById('data-status'),
-  userDataStatus: document.getElementById('user-data-status')
+  userDataStatus: document.getElementById('user-data-status'),
+  // Admin section elements
+  adminSection: document.getElementById('admin-section'),
+  fetchDeltaListButton: document.getElementById('fetch-delta-list'),
+  deltaListContainer: document.getElementById('delta-list-container'),
+  deltaFilesList: document.getElementById('delta-files-list'),
+  deltaFileContentContainer: document.getElementById('delta-file-content-container'),
+  deltaFileContent: document.getElementById('delta-file-content'),
+  deltaFileStatus: document.getElementById('delta-file-status')
 };
 
 // CSS classes for styling different states
@@ -44,13 +52,15 @@ const UI_CLASSES = {
  * @param {Function} fetchDataCallback - Function to call when fetch data button is clicked
  * @param {Function} fetchUserDataCallback - Function to call when fetch user data button is clicked
  * @param {Function} saveUserDataCallback - Function to call when save user data button is clicked
+ * @param {Function} fetchDeltaListCallback - Function to call when fetch delta list button is clicked
+ * @param {Function} viewDeltaFileCallback - Function to call when a delta file is clicked
  */
-export function initializeUI(signInCallback, signOutCallback, fetchDataCallback, fetchUserDataCallback, saveUserDataCallback) {
+export function initializeUI(signInCallback, signOutCallback, fetchDataCallback, fetchUserDataCallback, saveUserDataCallback, fetchDeltaListCallback, viewDeltaFileCallback) {
   // Check if DOM is loaded
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => setupEventListeners(signInCallback, signOutCallback, fetchDataCallback, fetchUserDataCallback, saveUserDataCallback));
+    document.addEventListener('DOMContentLoaded', () => setupEventListeners(signInCallback, signOutCallback, fetchDataCallback, fetchUserDataCallback, saveUserDataCallback, fetchDeltaListCallback, viewDeltaFileCallback));
   } else {
-    setupEventListeners(signInCallback, signOutCallback, fetchDataCallback, fetchUserDataCallback, saveUserDataCallback);
+    setupEventListeners(signInCallback, signOutCallback, fetchDataCallback, fetchUserDataCallback, saveUserDataCallback, fetchDeltaListCallback, viewDeltaFileCallback);
   }
 }
 
@@ -61,8 +71,10 @@ export function initializeUI(signInCallback, signOutCallback, fetchDataCallback,
  * @param {Function} fetchDataCallback - Function to call when fetch data button is clicked
  * @param {Function} fetchUserDataCallback - Function to call when fetch user data button is clicked
  * @param {Function} saveUserDataCallback - Function to call when save user data button is clicked
+ * @param {Function} fetchDeltaListCallback - Function to call when fetch delta list button is clicked
+ * @param {Function} viewDeltaFileCallback - Function to call when a delta file is clicked
  */
-function setupEventListeners(signInCallback, signOutCallback, fetchDataCallback, fetchUserDataCallback, saveUserDataCallback) {
+function setupEventListeners(signInCallback, signOutCallback, fetchDataCallback, fetchUserDataCallback, saveUserDataCallback, fetchDeltaListCallback, viewDeltaFileCallback) {
   // Re-assign DOM elements to ensure they're available
   const elements = {
     welcomeMessage: document.getElementById('welcome-message'),
@@ -82,7 +94,15 @@ function setupEventListeners(signInCallback, signOutCallback, fetchDataCallback,
     saveUserDataButton: document.getElementById('save-user-data'),
     userDataContent: document.getElementById('userdata-content'),
     apiUserData: document.getElementById('api-user-data'),
-    userDataStatus: document.getElementById('user-data-status')
+    userDataStatus: document.getElementById('user-data-status'),
+    // Admin section elements
+    adminSection: document.getElementById('admin-section'),
+    fetchDeltaListButton: document.getElementById('fetch-delta-list'),
+    deltaListContainer: document.getElementById('delta-list-container'),
+    deltaFilesList: document.getElementById('delta-files-list'),
+    deltaFileContentContainer: document.getElementById('delta-file-content-container'),
+    deltaFileContent: document.getElementById('delta-file-content'),
+    deltaFileStatus: document.getElementById('delta-file-status')
   };
   
   // Set up sign in button
@@ -144,7 +164,14 @@ function setupEventListeners(signInCallback, signOutCallback, fetchDataCallback,
       saveUserDataCallback();
     });
   }
-
+  
+  // Set up fetch delta list button (admin)
+  if (elements.fetchDeltaListButton && typeof fetchDeltaListCallback === 'function') {
+    elements.fetchDeltaListButton.addEventListener('click', () => {
+      showDeltaStatus('Fetching delta files...', UI_CLASSES.loading);
+      fetchDeltaListCallback();
+    });
+  }
 }
 
 /**
@@ -203,6 +230,128 @@ export function showAuthenticatedUser(user, tokenClaims) {
 /**
  * Update UI to show unauthenticated state
  */
+/**
+ * Display a list of delta files in the admin section
+ * @param {string[]} fileList - Array of delta file paths
+ * @param {Function} viewDeltaFileCallback - Function to call when a file is clicked
+ */
+export function displayDeltaFilesList(fileList, viewDeltaFileCallback) {
+  const elements = {
+    deltaListContainer: document.getElementById('delta-list-container'),
+    deltaFilesList: document.getElementById('delta-files-list')
+  };
+  
+  if (!elements.deltaListContainer || !elements.deltaFilesList) {
+    return;
+  }
+  
+  // Clear previous list
+  elements.deltaFilesList.innerHTML = '';
+  
+  // Show the list container
+  elements.deltaListContainer.style.display = 'block';
+  
+  if (!fileList || fileList.length === 0) {
+    elements.deltaFilesList.innerHTML = '<p>No delta files found.</p>';
+    return;
+  }
+  
+  // Create list of file links
+  const fileListHtml = fileList.map(filePath => {
+    // Extract just the filename part for display
+    const fileName = filePath.split('/').pop();
+    return `<div class="file-item"><a href="#" data-path="${filePath}">${fileName}</a></div>`;
+  }).join('');
+  
+  elements.deltaFilesList.innerHTML = fileListHtml;
+  
+  // Add click event listeners to the file links
+  const fileLinks = elements.deltaFilesList.querySelectorAll('a');
+  fileLinks.forEach(link => {
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      const filePath = event.target.getAttribute('data-path');
+      if (typeof viewDeltaFileCallback === 'function' && filePath) {
+        showDeltaStatus('Loading file content...', UI_CLASSES.loading);
+        viewDeltaFileCallback(filePath);
+      }
+    });
+  });
+}
+
+/**
+ * Display delta file content in the text area
+ * @param {Object} fileData - The file data to display
+ * @param {string} fileName - Name of the file
+ */
+export function displayDeltaFileContent(fileData, fileName) {
+  const elements = {
+    deltaFileContentContainer: document.getElementById('delta-file-content-container'),
+    deltaFileContent: document.getElementById('delta-file-content')
+  };
+  
+  if (!elements.deltaFileContentContainer || !elements.deltaFileContent) {
+    return;
+  }
+  
+  // Show the file content container
+  elements.deltaFileContentContainer.style.display = 'block';
+  
+  // Format the data as pretty JSON
+  const formattedData = JSON.stringify(fileData, null, 2);
+  elements.deltaFileContent.value = formattedData;
+  
+  // Show success status
+  showDeltaStatus(`Loaded file: ${fileName}`, UI_CLASSES.success);
+}
+
+/**
+ * Show a status message for delta operations
+ * @param {string} message - The status message to display
+ * @param {string} [statusClass] - CSS class for styling the status
+ */
+export function showDeltaStatus(message, statusClass) {
+  const elements = {
+    deltaFileStatus: document.getElementById('delta-file-status')
+  };
+  
+  if (elements.deltaFileStatus) {
+    // Remove all status classes
+    elements.deltaFileStatus.classList.remove(
+      UI_CLASSES.loading, 
+      UI_CLASSES.error, 
+      UI_CLASSES.success
+    );
+    
+    // Add specific status class if provided
+    if (statusClass) {
+      elements.deltaFileStatus.classList.add(statusClass);
+    }
+    
+    // Set message text
+    elements.deltaFileStatus.textContent = message;
+  }
+}
+
+/**
+ * Show error message for delta operations
+ * @param {string} errorMessage - The error message to display
+ */
+export function showDeltaError(errorMessage) {
+  showDeltaStatus(`Error: ${errorMessage}`, UI_CLASSES.error);
+}
+
+/**
+ * Show or hide the admin section based on authentication status
+ * @param {boolean} show - Whether to show (true) or hide (false) the admin section
+ */
+export function toggleAdminSection(show) {
+  const adminSection = document.getElementById('admin-section');
+  if (adminSection) {
+    adminSection.style.display = show ? 'block' : 'none';
+  }
+}
+
 export function showUnauthenticatedState() {
   const elements = {
     welcomeMessage: document.getElementById('welcome-message'),

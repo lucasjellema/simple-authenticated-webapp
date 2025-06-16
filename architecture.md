@@ -10,6 +10,7 @@ The application follows a modular architecture with clear separation of concerns
 - Authentication is handled through Microsoft Entra ID (Azure AD) using MSAL.js
 - Data services manage API communication with authentication tokens, including both data retrieval and persistence
 - UI components handle rendering and user interactions with bidirectional data flow
+- Admin module provides specialized functionality for authenticated administrators
 
 ## Module Structure
 
@@ -20,9 +21,9 @@ The application is structured into several key JavaScript modules:
 | `app.js` | Main application coordinator that initializes components and manages flow |
 | `auth.js` | Handles authentication with Microsoft Entra ID using MSAL.js |
 | `authConfig.js` | Configuration parameters for Microsoft authentication |
-| `dataService.js` | Manages authenticated API calls and data caching |
-| `dataConfig.js` | Configuration for API endpoints |
-| `ui.js` | Handles DOM manipulation and user interface interactions |
+| `dataService.js` | Manages authenticated API calls, data caching, and administrative operations |
+| `dataConfig.js` | Configuration for API endpoints including admin endpoints |
+| `ui.js` | Handles DOM manipulation and user interface interactions including admin UI |
 
 ## Application Flow
 
@@ -55,6 +56,7 @@ The application is structured into several key JavaScript modules:
    - Auth module maintains authentication state and tokens
    - Data service module handles API communication, caching, and data persistence
    - Bidirectional data flow allows both reading and writing data
+   - Role-based access control determines availability of admin functionality
 
 ## Security Considerations
 
@@ -100,6 +102,25 @@ The application communicates with backend APIs using the following patterns:
 7. Handles the response, including success and error cases
 8. Updates the UI with status information
 
+**Admin Operations:**
+1. Validates user has appropriate access rights
+2. Retrieves the ID token from the auth module
+3. Constructs a fetch request with the token in the Authorization header
+4. For file listings, sends a GET request with an empty Asset-Path header
+5. For specific file content, sends a GET request with the specific Asset-Path
+6. Handles response data and updates the admin UI section
+7. Provides interactive file browsing through dynamically created elements
+
+### Admin Access Control
+
+The application implements role-based access control for administrative functions:
+
+1. **Authentication Verification**: Admin functionality is only available to authenticated users
+2. **Role-Based Access**: The system checks ID token claims for specific roles
+3. **UI Visibility Control**: Admin UI components are conditionally displayed based on authorization
+4. **Secure API Calls**: All admin API calls include proper authorization headers
+5. **Custom Headers**: Specific Asset-Path headers are added to target admin operations
+
 ## Component Diagram
 
 ```mermaid
@@ -117,6 +138,11 @@ graph TD
     DataService -->|Uses endpoints from| DataConfig[Data Config]
     DataService -->|Gets tokens from| Auth
     DataService <-->|Fetches/sends data to| APIGateway[API Gateway]
+    DataService <-->|Admin operations| AdminAPI[Admin API Gateway]
+    
+    App -->|Checks roles| AccessControl[Access Control]
+    AccessControl -->|Controls visibility of| AdminUI[Admin UI Components]
+    AccessControl -->|Uses claims from| Auth
     
     subgraph "Client Application"
         UI
@@ -125,15 +151,19 @@ graph TD
         DataService
         AuthConfig
         DataConfig
+        AccessControl
+        AdminUI
     end
     
     subgraph "External Services"
         EntraID
         APIGateway
+        AdminAPI
     end
     
     EntraID -->|Issues tokens for| User
     APIGateway -->|Returns/stores data| DataService
+    AdminAPI -->|Returns delta files| DataService
 ```
 
 ## Data Flow Diagram
@@ -146,6 +176,7 @@ sequenceDiagram
     participant DataService
     participant EntraID as Microsoft Entra ID
     participant API as API Gateway
+    participant AdminAPI as Admin API Gateway
     
     User->>App: Load application
     App->>Auth: Initialize auth
@@ -159,6 +190,7 @@ sequenceDiagram
     Auth->>EntraID: Exchange code for tokens
     EntraID->>Auth: Return tokens
     Auth->>App: Authentication complete
+    App->>App: Check token claims for admin role
     App->>User: Update UI (authenticated)
     
     User->>App: Request data
@@ -191,6 +223,36 @@ sequenceDiagram
     API->>DataService: Return success
     DataService->>App: Return result
     App->>User: Display success/error
+    
+    User->>App: Click Fetch Delta Files (admin)
+    App->>DataService: Request delta files list
+    DataService->>Auth: Get ID token
+    Auth->>DataService: Return token
+    
+    Note over DataService,AdminAPI: Authorization: Bearer {token}
+    Note over DataService,AdminAPI: Asset-Path: ''
+    
+    DataService->>AdminAPI: Send GET request
+    AdminAPI->>AdminAPI: CORS preflight (OPTIONS)
+    AdminAPI->>AdminAPI: Validate token
+    AdminAPI->>DataService: Return delta files list
+    DataService->>App: Return files list
+    App->>User: Display delta files
+    
+    User->>App: Click on specific delta file
+    App->>DataService: Request file content
+    DataService->>Auth: Get ID token
+    Auth->>DataService: Return token
+    
+    Note over DataService,AdminAPI: Authorization: Bearer {token}
+    Note over DataService,AdminAPI: Asset-Path: 'file/path'
+    
+    DataService->>AdminAPI: Send GET request with Asset-Path
+    AdminAPI->>AdminAPI: CORS preflight (OPTIONS)
+    AdminAPI->>AdminAPI: Validate token
+    AdminAPI->>DataService: Return file content
+    DataService->>App: Return file content
+    App->>User: Display file content
 
     User->>App: Click Sign Out
     App->>Auth: Request sign out

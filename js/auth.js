@@ -49,8 +49,8 @@ export function initializeAuth() {
             const event = new CustomEvent('msalLoginSuccess', { detail: message });
             window.dispatchEvent(event);
             // Update UI if needed
-            if (message.account) {
-                showWelcomeMessage(message.account.username);
+            if (message.payload.account) {
+                showWelcomeMessage(message.payload.account.username);
             }
         }
     });
@@ -64,8 +64,8 @@ export function initializeAuth() {
  */
 export async function handleResponse(response) {
     if (response !== null) {
-        username = response.account.username;
-        showWelcomeMessage(username);
+      //  username = response.account.username;
+      //  showWelcomeMessage(username);
     } else {
         selectAccount();
     }

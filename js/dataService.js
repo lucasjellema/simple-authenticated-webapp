@@ -7,9 +7,8 @@
  * in memory throughout the session.
  */
 
-import { dataEndpoint, deltaEndpoint } from './dataConfig.js';
+import { dataEndpoint, deltaEndpoint, adminEndpoint } from './dataConfig.js';
 import { getIdToken } from './auth.js';
-import * as ui from './ui.js';
 
 // Constants for status and error messages
 const STATUS = {
@@ -235,12 +234,107 @@ export async function saveUserData(data) {
         console.error('Error saving data:', error);
         throw new Error(`Failed to save data: ${error.message}`);
     }
-
-
-
 }
 
+// get list of objects in deltas directory - admin only 
+export async function getDeltaListAsAdmin(pathPrefix='conclusion-assets/deltas/') {
+    // Get the ID token for authentication
+    const idToken = getIdToken();
+    
+    // Check if token is available
+    if (!idToken) {
+        const error = 'No authentication token available. Please sign in.';
+        throw new Error(error);
+    }
+    
+    console.log(`Admin mode: Fetching list of delta file names from ${adminEndpoint} with empty Asset-Path.`);
+    try {
+        // add timestamp to prevent caching
+        const listResponse = await fetch(adminEndpoint + `?ts=${Date.now()}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${idToken}`,
+                'Asset-Path': '' // Empty string for listing
+            }
+        });
 
+        if (!listResponse.ok) {
+            const errorBody = await listResponse.text();
+            console.error(`Error fetching delta file list: ${listResponse.status} ${listResponse.statusText}. Body: ${errorBody}`);
+            return []; // Stop if we can't get the list
+        }
+
+        const listData = await listResponse.json();
+
+        if (!listData || typeof listData.objects !== 'object' || listData.objects === null) {
+            console.error('Error: Delta file list response does not contain a valid \'objects\' property.', listData);
+            return [];
+        }
+
+        // Convert the object of objects into an array of {name: 'path'} objects, then extract the names
+        const allObjectPaths = Object.values(listData.objects);
+        let deltaFileNames = allObjectPaths
+            .map(obj => obj && obj.name) // Extract the name property
+            .filter(name => typeof name === 'string'); // Ensure it's a string
+
+        // Further filter to include only actual delta files, e.g., those in a specific path
+        // This path should match how your delta files are stored and identified.
+        deltaFileNames = deltaFileNames.filter(name => name.startsWith(pathPrefix));
+
+        if (deltaFileNames.length === 0) {
+            console.log('No delta files found after filtering paths.');
+            return [];
+        }
+        console.log(`Found ${deltaFileNames.length} delta file names to process after filtering:`, deltaFileNames);
+
+        return deltaFileNames;
+    } catch (error) {
+        console.error('Error fetching delta file list:', error);
+        return [];
+    }
+}
+
+export async function getDeltaFileData(objectName, pathPrefix='conclusion-assets/deltas/') {
+    // Get the ID token for authentication
+    const idToken = getIdToken();
+    
+    // Check if token is available
+    if (!idToken) {
+        const error = 'No authentication token available. Please sign in.';
+        throw new Error(error);
+    }
+    
+    try {
+        console.log(`Fetching delta file content for: ${objectName}`);
+        
+        // Determine the asset path - if objectName already contains the prefix, don't add it again
+        const assetPath = objectName.startsWith(pathPrefix) ? objectName : `${pathPrefix}${objectName}`;
+        
+        // Fetch the file content using the admin endpoint
+        const response = await fetch(adminEndpoint + `?ts=${Date.now()}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${idToken}`,
+                'Asset-Path': assetPath
+            }
+        });
+        
+        if (!response.ok) {
+            const errorBody = await response.text();
+            console.error(`Error fetching delta file content: ${response.status} ${response.statusText}. Body: ${errorBody}`);
+            throw new Error(`Failed to fetch delta file: ${response.status} ${response.statusText}`);
+        }
+        
+        // Parse the response as JSON
+        const fileData = await response.json();
+        console.log(`Successfully fetched delta file: ${objectName}`);
+        
+        return fileData;
+    } catch (error) {
+        console.error(`Error fetching delta file data for ${objectName}:`, error);
+        throw error;
+    }
+}
 
 /**
  * Get the current status of data fetching
