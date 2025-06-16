@@ -8,8 +8,8 @@ The application follows a modular architecture with clear separation of concerns
 
 - The core application logic coordinates authentication flow and initialization
 - Authentication is handled through Microsoft Entra ID (Azure AD) using MSAL.js
-- Data services manage API communication with authentication tokens
-- UI components handle rendering and user interactions
+- Data services manage API communication with authentication tokens, including both data retrieval and persistence
+- UI components handle rendering and user interactions with bidirectional data flow
 
 ## Module Structure
 
@@ -39,18 +39,22 @@ The application is structured into several key JavaScript modules:
    - MSAL.js handles the token acquisition and storage
    - User information is fetched from Microsoft Graph API
 
-3. **Data Retrieval Flow**:
+3. **Data Retrieval & Persistence Flow**:
    - After authentication, data can be fetched from configured API endpoints
    - The ID token from authentication is used as a bearer token
-   - API requests are sent with proper authorization headers
+   - GET requests are sent with proper authorization headers
    - Responses are cached in memory to minimize redundant API calls
    - UI is updated to display the fetched data
+   - User can modify data through the UI
+   - Modified data is sent back to the server via authenticated PUT requests
+   - Changes are timestamped with lastModified property
 
 4. **Component Interaction**:
    - App module coordinates between auth, data, and UI modules
    - UI module responds to user interactions and delegates to app module
    - Auth module maintains authentication state and tokens
-   - Data service module handles API communication and caching
+   - Data service module handles API communication, caching, and data persistence
+   - Bidirectional data flow allows both reading and writing data
 
 ## Security Considerations
 
@@ -76,14 +80,25 @@ The authentication uses the OAuth 2.0 authorization code flow with PKCE, impleme
 
 ### API Communication
 
-The application communicates with backend APIs using the following pattern:
+The application communicates with backend APIs using the following patterns:
 
+**Data Retrieval (GET):**
 1. Retrieves the ID token from the auth module
 2. Constructs a fetch request with the token in the Authorization header
-3. Sends the request to the configured endpoint
+3. Sends the GET request to the configured endpoint
 4. Handles the response, including error cases
 5. Caches the successful response for future use
 6. Updates the UI with the retrieved data
+
+**Data Persistence (PUT):**
+1. Captures modified data from the UI
+2. Validates data format (JSON parsing)
+3. Adds metadata such as lastModified timestamp
+4. Retrieves the ID token from the auth module
+5. Constructs a fetch request with the token in the Authorization header
+6. Sends the PUT request to the configured endpoint with the data payload
+7. Handles the response, including success and error cases
+8. Updates the UI with status information
 
 ## Component Diagram
 
@@ -94,14 +109,14 @@ graph TD
     
     App -->|Initializes| Auth[Auth Module]
     App -->|Controls| UI
-    App -->|Requests data via| DataService[Data Service]
+    App -->|Requests/saves data via| DataService[Data Service]
     
     Auth -->|Uses config from| AuthConfig[Auth Config]
     Auth <-->|Authenticates with| EntraID[Microsoft Entra ID]
     
     DataService -->|Uses endpoints from| DataConfig[Data Config]
     DataService -->|Gets tokens from| Auth
-    DataService <-->|Fetches data from| APIGateway[API Gateway]
+    DataService <-->|Fetches/sends data to| APIGateway[API Gateway]
     
     subgraph "Client Application"
         UI
@@ -118,7 +133,7 @@ graph TD
     end
     
     EntraID -->|Issues tokens for| User
-    APIGateway -->|Returns data to| DataService
+    APIGateway -->|Returns/stores data| DataService
 ```
 
 ## Data Flow Diagram
@@ -153,12 +168,29 @@ sequenceDiagram
     
     Note over DataService,API: Authorization: Bearer {token}
     
-    DataService->>API: Send authenticated request
+    DataService->>API: Send GET request
     API->>API: CORS preflight (OPTIONS)
     API->>API: Validate token
     API->>DataService: Return data
     DataService->>App: Return formatted data
     App->>User: Display data
+    
+    User->>App: Modify data
+    User->>App: Click Save User Data
+    App->>DataService: Save user data
+    DataService->>Auth: Get ID token
+    Auth->>DataService: Return token
+    DataService->>DataService: Add timestamp
+    
+    Note over DataService,API: Authorization: Bearer {token}
+    
+    DataService->>API: Send PUT request
+    API->>API: CORS preflight (OPTIONS)
+    API->>API: Validate token
+    API->>API: Process data update
+    API->>DataService: Return success
+    DataService->>App: Return result
+    App->>User: Display success/error
 
     User->>App: Click Sign Out
     App->>Auth: Request sign out

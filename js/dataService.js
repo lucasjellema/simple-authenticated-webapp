@@ -9,6 +9,7 @@
 
 import { dataEndpoint, deltaEndpoint } from './dataConfig.js';
 import { getIdToken } from './auth.js';
+import * as ui from './ui.js';
 
 // Constants for status and error messages
 const STATUS = {
@@ -166,6 +167,79 @@ export async function getUserData(forceRefresh = false) {
         throw error;
     }
 }
+
+export async function saveUserData(data) {
+    dataCache.userdata = data;
+
+    // Get the ID token for authentication
+    const idToken = getIdToken();
+
+    // Check if token is available
+    if (!idToken) {
+        const error = 'No authentication token available. Please sign in.';
+        dataCache.status = STATUS.ERROR;
+        dataCache.error = error;
+        throw new Error(error);
+    }
+
+
+    // The API Gateway route for /deltas (e.g., /conclusion-proxy/speakerpool-delta or /conclusion-proxy2/deltas)
+    // is expected to handle PUT requests and use request.auth[name] to determine the specific file in object storage.
+    // The deltaEndpoint variable should point to this base path for the API Gateway route.
+    // Based on previous user changes (Step 31), deltaEndpoint was set to:
+    // "https://odzno3g32mjesdrjipad23mbxq.apigateway.eu-amsterdam-1.oci.customer-oci.com/conclusion-proxy/speakerpool-delta"
+    // (after removing /conclusion-assets/deltas/ from its original value)
+    // This is the endpoint the PUT request should target.
+
+    const actualPutEndpoint = deltaEndpoint;
+
+    // Add/update the lastModified timestamp
+    data.lastModified = new Date().toISOString();
+
+    // Get user ID from token claims if possible, otherwise use 'unknown'    
+    const userId = 'current-user'; // This could be extracted from token claims if needed
+    console.log(`Attempting to PUT updated profile to: ${actualPutEndpoint}`);
+
+    try {
+        const response = await fetch(actualPutEndpoint, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${idToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            const errorBody = await response.text();
+            console.error('Error saving data:', response.status, errorBody);
+            throw new Error(`Failed to save data: ${response.status} ${response.statusText}. Detail: ${errorBody}`);
+        }
+        console.log('Data saved successfully .');
+        // Try to parse JSON from response, but handle cases where response might be empty (e.g., 204 No Content)
+        const responseContentType = response.headers.get('content-type');
+        let responseData = { success: true }; // Default success response
+        if (responseContentType && responseContentType.includes('application/json')) {
+            responseData = await response.json();
+        } else if (response.status === 204) {
+            console.log('Data saved successfully (204 No Content).');
+        } else {
+            // If not JSON and not 204, just use default success and log the text if any
+            const textResponse = await response.text();
+            if (textResponse) console.log('Update response text:', textResponse);
+        }
+
+        return { success: true, data: responseData };
+
+    } catch (error) {
+        console.error('Error saving data:', error);
+        throw new Error(`Failed to save data: ${error.message}`);
+    }
+
+
+
+}
+
 
 
 /**

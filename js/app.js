@@ -39,7 +39,7 @@ async function initializeApp() {
   }
   
   // Set up UI with auth callbacks
-  ui.initializeUI(handleSignIn, handleSignOut, handleFetchData, handleFetchUserData);
+  ui.initializeUI(handleSignIn, handleSignOut, handleFetchData, handleFetchUserData, handleSaveUserData);
   
   // Check for redirect response
   try {
@@ -207,6 +207,44 @@ async function handleFetchUserData() {
   } catch (error) {
     console.error("Error fetching user data:", error);
     ui.showDataError(error.message || "Failed to fetch user data");
+  }
+}
+
+/**
+ * Handle save user data button click
+ * Saves the current content of the user data textarea to the API
+ */
+async function handleSaveUserData() {
+  // Constants for DOM elements
+  const USER_DATA_ELEMENTS = {
+    userDataTextarea: document.getElementById('api-user-data')
+  };
+  
+  if (!APP_STATE.authenticated) {
+    ui.showDataError("You must be authenticated to save user data");
+    return;
+  }
+  
+  try {
+    // Get current content from the textarea
+    const userDataText = USER_DATA_ELEMENTS.userDataTextarea.value;
+    
+    // Parse the JSON content
+    let userData;
+    try {
+      userData = JSON.parse(userDataText);
+    } catch (parseError) {
+      throw new Error("Invalid JSON data. Please ensure data is in correct format.");
+    }
+    
+    // Save data to the API
+    await dataService.saveUserData(userData);
+    
+    // Show success message
+    ui.showDataStatus("User data saved successfully", "success");
+  } catch (error) {
+    console.error("Error saving user data:", error);
+    ui.showDataError(error.message || "Failed to save user data");
   }
 }
 

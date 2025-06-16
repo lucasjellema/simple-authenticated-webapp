@@ -18,6 +18,7 @@ const DOM_ELEMENTS = {
   dataSection: document.getElementById('data-section'),
   userDataSection: document.getElementById('userdata-section'),
   fetchUserDataButton: document.getElementById('fetch-user-data'),
+  saveUserDataButton: document.getElementById('save-user-data'),
   fetchDataButton: document.getElementById('fetch-data'),
   dataContent: document.getElementById('data-content'),
   userDataContent: document.getElementById('userdata-content'),
@@ -42,13 +43,14 @@ const UI_CLASSES = {
  * @param {Function} signOutCallback - Function to call when sign-out button is clicked
  * @param {Function} fetchDataCallback - Function to call when fetch data button is clicked
  * @param {Function} fetchUserDataCallback - Function to call when fetch user data button is clicked
+ * @param {Function} saveUserDataCallback - Function to call when save user data button is clicked
  */
-export function initializeUI(signInCallback, signOutCallback, fetchDataCallback, fetchUserDataCallback) {
+export function initializeUI(signInCallback, signOutCallback, fetchDataCallback, fetchUserDataCallback, saveUserDataCallback) {
   // Check if DOM is loaded
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => setupEventListeners(signInCallback, signOutCallback, fetchDataCallback, fetchUserDataCallback));
+    document.addEventListener('DOMContentLoaded', () => setupEventListeners(signInCallback, signOutCallback, fetchDataCallback, fetchUserDataCallback, saveUserDataCallback));
   } else {
-    setupEventListeners(signInCallback, signOutCallback, fetchDataCallback, fetchUserDataCallback);
+    setupEventListeners(signInCallback, signOutCallback, fetchDataCallback, fetchUserDataCallback, saveUserDataCallback);
   }
 }
 
@@ -58,8 +60,9 @@ export function initializeUI(signInCallback, signOutCallback, fetchDataCallback,
  * @param {Function} signOutCallback - Function to call when sign-out button is clicked
  * @param {Function} fetchDataCallback - Function to call when fetch data button is clicked
  * @param {Function} fetchUserDataCallback - Function to call when fetch user data button is clicked
+ * @param {Function} saveUserDataCallback - Function to call when save user data button is clicked
  */
-function setupEventListeners(signInCallback, signOutCallback, fetchDataCallback, fetchUserDataCallback) {
+function setupEventListeners(signInCallback, signOutCallback, fetchDataCallback, fetchUserDataCallback, saveUserDataCallback) {
   // Re-assign DOM elements to ensure they're available
   const elements = {
     welcomeMessage: document.getElementById('welcome-message'),
@@ -76,6 +79,7 @@ function setupEventListeners(signInCallback, signOutCallback, fetchDataCallback,
     dataStatus: document.getElementById('data-status'),
     userDataSection: document.getElementById('userdata-section'),
     fetchUserDataButton: document.getElementById('fetch-user-data'),
+    saveUserDataButton: document.getElementById('save-user-data'),
     userDataContent: document.getElementById('userdata-content'),
     apiUserData: document.getElementById('api-user-data'),
     userDataStatus: document.getElementById('user-data-status')
@@ -127,6 +131,17 @@ function setupEventListeners(signInCallback, signOutCallback, fetchDataCallback,
       
       // Call the fetch user data callback
       fetchUserDataCallback();
+    });
+  }
+  
+  // Set up save user data button
+  if (elements.saveUserDataButton && typeof saveUserDataCallback === 'function') {
+    elements.saveUserDataButton.addEventListener('click', () => {
+      // Show saving status
+      showDataStatus('Saving user data...', UI_CLASSES.loading);
+      
+      // Call the save user data callback
+      saveUserDataCallback();
     });
   }
 

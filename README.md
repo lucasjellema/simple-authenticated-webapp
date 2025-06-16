@@ -10,6 +10,7 @@ A lightweight static web application that demonstrates authentication with Micro
 - Collapsible ID token viewer for debugging and educational purposes
 - In-memory token storage (not stored in browser storage)
 - Authenticated API data fetching with bearer token
+- User data editing and saving with authenticated PUT requests
 - Request caching and optimized data handling
 - Modular code structure using ES Modules
 
@@ -60,8 +61,11 @@ A lightweight static web application that demonstrates authentication with Micro
 2. Click "Sign In" to authenticate with Microsoft Entra ID
 3. After successful authentication, the user's name will be displayed
 4. The application will automatically fetch and display data from the configured endpoints
-5. Click "Show Token" to view the ID token claims in JSON format
-6. Click "Sign Out" to end the session
+5. Click "Fetch User Data" to retrieve user-specific data
+6. Edit the user data in the text area if needed
+7. Click "Save User Data" to persist changes back to the server
+8. Click "Show Token" to view the ID token claims in JSON format
+9. Click "Sign Out" to end the session
 
 ## Development Principles
 
@@ -79,6 +83,8 @@ This project follows these development principles:
 - Authentication state is not persisted between browser sessions
 - API requests include bearer tokens in Authorization headers
 - Preflight requests are automatically handled by the browser for authenticated API calls with custom headers
+- Data modification is secured with authenticated PUT requests
+- User data changes are timestamped with lastModified property
 
 ## Customization
 
