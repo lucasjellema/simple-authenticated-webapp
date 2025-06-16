@@ -1,6 +1,6 @@
 # Simple Microsoft Entra ID Authentication Web App
 
-A lightweight static web application that demonstrates authentication with Microsoft Entra ID (Azure AD) and displays the currently authenticated user's details.
+A lightweight static web application that demonstrates authentication with Microsoft Entra ID (Azure AD), displays the authenticated user's details, and fetches authenticated data from remote endpoints.
 
 ## Features
 
@@ -9,6 +9,8 @@ A lightweight static web application that demonstrates authentication with Micro
 - Displays authenticated user's name and profile information
 - Collapsible ID token viewer for debugging and educational purposes
 - In-memory token storage (not stored in browser storage)
+- Authenticated API data fetching with bearer token
+- Request caching and optimized data handling
 - Modular code structure using ES Modules
 
 ## Project Structure
@@ -21,6 +23,8 @@ A lightweight static web application that demonstrates authentication with Micro
 │   ├── app.js       - Main application module that connects components
 │   ├── auth.js      - Authentication module for Entra ID integration
 │   ├── authConfig.js - Authentication configuration settings
+│   ├── dataConfig.js - Configuration settings for data endpoints
+│   ├── dataService.js - Service for fetching authenticated data
 │   └── ui.js        - UI module for managing the user interface
 └── README.md        - This documentation file
 ```
@@ -31,6 +35,8 @@ A lightweight static web application that demonstrates authentication with Micro
 
 - A Microsoft Azure account with permissions to register applications
 - A registered application in the Microsoft Entra ID portal (Azure AD)
+- A valid API endpoint for fetching authenticated data (for example on a API Gateway)
+- A valid API endpoint for fetching user-specific data (for example on a API Gateway)
 
 ### Configuration
 
@@ -53,8 +59,9 @@ A lightweight static web application that demonstrates authentication with Micro
 1. Open the application in a web browser
 2. Click "Sign In" to authenticate with Microsoft Entra ID
 3. After successful authentication, the user's name will be displayed
-4. Click "Show Token" to view the ID token claims in JSON format
-5. Click "Sign Out" to end the session
+4. The application will automatically fetch and display data from the configured endpoints
+5. Click "Show Token" to view the ID token claims in JSON format
+6. Click "Sign Out" to end the session
 
 ## Development Principles
 
@@ -70,6 +77,8 @@ This project follows these development principles:
 - ID tokens are stored in memory only, not in browser storage
 - The application follows security best practices for authentication
 - Authentication state is not persisted between browser sessions
+- API requests include bearer tokens in Authorization headers
+- Preflight requests are automatically handled by the browser for authenticated API calls with custom headers
 
 ## Customization
 
