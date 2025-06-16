@@ -9,6 +9,7 @@
 
 import * as auth from './auth.js';
 import * as ui from './ui.js';
+import * as dataService from './dataService.js';
 
 // Constants for application state
 const APP_STATE = {
@@ -38,7 +39,7 @@ async function initializeApp() {
   }
   
   // Set up UI with auth callbacks
-  ui.initializeUI(handleSignIn, handleSignOut);
+  ui.initializeUI(handleSignIn, handleSignOut, handleFetchData, handleFetchUserData);
   
   // Check for redirect response
   try {
@@ -166,6 +167,49 @@ function handleSignOut() {
     ui.showError("Failed to sign out");
   }
 }
+
+/**
+ * Handle fetch data button click
+ */
+async function handleFetchData() {
+  if (!APP_STATE.authenticated) {
+    ui.showDataError("You must be authenticated to fetch data");
+    return;
+  }
+  
+  try {
+    // Get data from the API
+    const data = await dataService.getData();
+    
+    // Display the data in the UI
+    ui.displayData(data);
+  } catch (error) {
+    console.error("Error fetching data:", error);
+    ui.showDataError(error.message || "Failed to fetch data");
+  }
+}
+
+/**
+ * Handle fetch user data button click
+ */
+async function handleFetchUserData() {
+  if (!APP_STATE.authenticated) {
+    ui.showDataError("You must be authenticated to fetch user data");
+    return;
+  }
+  
+  try {
+    // Get user data from the API
+    const userdata = await dataService.getUserData();
+    
+    // Display the user data in the UI
+    ui.displayUserData(userdata);
+  } catch (error) {
+    console.error("Error fetching user data:", error);
+    ui.showDataError(error.message || "Failed to fetch user data");
+  }
+}
+
 
 // Initialize the application when the document is loaded
 document.addEventListener('DOMContentLoaded', initializeApp);

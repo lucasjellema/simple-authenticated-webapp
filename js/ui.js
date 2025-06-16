@@ -14,26 +14,41 @@ const DOM_ELEMENTS = {
   tokenSection: document.getElementById('token-section'),
   tokenToggle: document.getElementById('toggle-token'),
   tokenContent: document.getElementById('token-content'),
-  tokenData: document.getElementById('token-data')
+  tokenData: document.getElementById('token-data'),
+  dataSection: document.getElementById('data-section'),
+  userDataSection: document.getElementById('userdata-section'),
+  fetchUserDataButton: document.getElementById('fetch-user-data'),
+  fetchDataButton: document.getElementById('fetch-data'),
+  dataContent: document.getElementById('data-content'),
+  userDataContent: document.getElementById('userdata-content'),
+  apiData: document.getElementById('api-data'),
+  apiUserData: document.getElementById('api-user-data'),
+  dataStatus: document.getElementById('data-status'),
+  userDataStatus: document.getElementById('user-data-status')
 };
 
 // CSS classes for styling different states
 const UI_CLASSES = {
   authenticated: 'authenticated',
-  unauthenticated: 'unauthenticated'
+  unauthenticated: 'unauthenticated',
+  loading: 'loading',
+  error: 'error',
+  success: 'success'
 };
 
 /**
  * Initialize the UI elements
  * @param {Function} signInCallback - Function to call when sign-in button is clicked
  * @param {Function} signOutCallback - Function to call when sign-out button is clicked
+ * @param {Function} fetchDataCallback - Function to call when fetch data button is clicked
+ * @param {Function} fetchUserDataCallback - Function to call when fetch user data button is clicked
  */
-export function initializeUI(signInCallback, signOutCallback) {
+export function initializeUI(signInCallback, signOutCallback, fetchDataCallback, fetchUserDataCallback) {
   // Check if DOM is loaded
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => setupEventListeners(signInCallback, signOutCallback));
+    document.addEventListener('DOMContentLoaded', () => setupEventListeners(signInCallback, signOutCallback, fetchDataCallback, fetchUserDataCallback));
   } else {
-    setupEventListeners(signInCallback, signOutCallback);
+    setupEventListeners(signInCallback, signOutCallback, fetchDataCallback, fetchUserDataCallback);
   }
 }
 
@@ -41,8 +56,10 @@ export function initializeUI(signInCallback, signOutCallback) {
  * Set up event listeners for buttons
  * @param {Function} signInCallback - Function to call when sign-in button is clicked
  * @param {Function} signOutCallback - Function to call when sign-out button is clicked
+ * @param {Function} fetchDataCallback - Function to call when fetch data button is clicked
+ * @param {Function} fetchUserDataCallback - Function to call when fetch user data button is clicked
  */
-function setupEventListeners(signInCallback, signOutCallback) {
+function setupEventListeners(signInCallback, signOutCallback, fetchDataCallback, fetchUserDataCallback) {
   // Re-assign DOM elements to ensure they're available
   const elements = {
     welcomeMessage: document.getElementById('welcome-message'),
@@ -51,7 +68,17 @@ function setupEventListeners(signInCallback, signOutCallback) {
     tokenSection: document.getElementById('token-section'),
     tokenToggle: document.getElementById('toggle-token'),
     tokenContent: document.getElementById('token-content'),
-    tokenData: document.getElementById('token-data')
+    tokenData: document.getElementById('token-data'),
+    dataSection: document.getElementById('data-section'),
+    fetchDataButton: document.getElementById('fetch-data'),
+    dataContent: document.getElementById('data-content'),
+    apiData: document.getElementById('api-data'),
+    dataStatus: document.getElementById('data-status'),
+    userDataSection: document.getElementById('userdata-section'),
+    fetchUserDataButton: document.getElementById('fetch-user-data'),
+    userDataContent: document.getElementById('userdata-content'),
+    apiUserData: document.getElementById('api-user-data'),
+    userDataStatus: document.getElementById('user-data-status')
   };
   
   // Set up sign in button
@@ -81,6 +108,28 @@ function setupEventListeners(signInCallback, signOutCallback) {
       toggleTokenVisibility(!isExpanded);
     });
   }
+  
+  // Set up fetch data button
+  if (elements.fetchDataButton && typeof fetchDataCallback === 'function') {
+    elements.fetchDataButton.addEventListener('click', () => {
+      // Show loading status
+      showDataStatus('Loading data...', UI_CLASSES.loading);
+      
+      // Call the fetch data callback
+      fetchDataCallback();
+    });
+  }
+  // Set up fetch user data button
+  if (elements.fetchUserDataButton && typeof fetchUserDataCallback === 'function') {
+    elements.fetchUserDataButton.addEventListener('click', () => {
+      // Show loading status
+      showDataStatus('Loading user data...', UI_CLASSES.loading);
+      
+      // Call the fetch user data callback
+      fetchUserDataCallback();
+    });
+  }
+
 }
 
 /**
@@ -94,7 +143,8 @@ export function showAuthenticatedUser(user, tokenClaims) {
     signInButton: document.getElementById('signin-button'),
     signOutButton: document.getElementById('signout-button'),
     tokenSection: document.getElementById('token-section'),
-    tokenData: document.getElementById('token-data')
+    tokenData: document.getElementById('token-data'),
+    dataSection: document.getElementById('data-section')
   };
   
   // Update welcome message with user's name
@@ -123,6 +173,11 @@ export function showAuthenticatedUser(user, tokenClaims) {
     if (elements.tokenData && tokenClaims) {
       elements.tokenData.value = JSON.stringify(tokenClaims, null, 2);
     }
+  }
+  
+  // Show data section
+  if (elements.dataSection) {
+    elements.dataSection.style.display = 'block';
   }
   
   // Add authenticated class to body
@@ -157,14 +212,95 @@ export function showUnauthenticatedState() {
     elements.signOutButton.style.display = 'none';
   }
   
-  // Hide token section
+  // Hide token section and data section
   if (elements.tokenSection) {
     elements.tokenSection.style.display = 'none';
+  }
+  
+  if (elements.dataSection) {
+    elements.dataSection.style.display = 'none';
+  }
+  
+  if (elements.userDataSection) {
+    elements.userDataSection.style.display = 'none';
   }
   
   // Update body class
   document.body.classList.add(UI_CLASSES.unauthenticated);
   document.body.classList.remove(UI_CLASSES.authenticated);
+}
+
+/**
+ * Display data in the API data textarea
+ * @param {Object} data - The data to display
+ */
+export function displayData(data) {
+  const elements = {
+    apiData: document.getElementById('api-data')
+  };
+  
+  if (elements.apiData && data) {
+    // Format the data as pretty JSON
+    const formattedData = JSON.stringify(data, null, 2);
+    elements.apiData.value = formattedData;
+    
+    // Show success status
+    showDataStatus('Data fetched successfully', UI_CLASSES.success);
+  }
+}
+/**
+ * Display data in the API data textarea
+ * @param {Object} data - The data to display
+ */
+export function displayUserData(data) {
+  const elements = {
+    apiUserData: document.getElementById('api-user-data')
+  };
+  
+  if (elements.apiUserData && data) {
+    // Format the data as pretty JSON
+    const formattedData = JSON.stringify(data, null, 2);
+    elements.apiUserData.value = formattedData;
+    
+    // Show success status
+    showDataStatus('User Data fetched successfully', UI_CLASSES.success);
+  }
+}
+
+/**
+ * Show a data status message
+ * @param {string} message - The status message to display
+ * @param {string} [statusClass] - CSS class for styling the status
+ */
+export function showDataStatus(message, statusClass) {
+  const elements = {
+    dataStatus: document.getElementById('data-status')
+  };
+  
+  if (elements.dataStatus) {
+    // Remove all status classes
+    elements.dataStatus.classList.remove(
+      UI_CLASSES.loading, 
+      UI_CLASSES.error, 
+      UI_CLASSES.success
+    );
+    
+    // Add specific status class if provided
+    if (statusClass) {
+      elements.dataStatus.classList.add(statusClass);
+    }
+    
+    // Set message text
+    elements.dataStatus.textContent = message;
+  }
+}
+
+/**
+ * Display an error message for data fetching
+ * @param {string} errorMessage - The error message to display
+ */
+export function showDataError(errorMessage) {
+  showDataStatus(`Error: ${errorMessage}`, UI_CLASSES.error);
 }
 
 /**
