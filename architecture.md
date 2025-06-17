@@ -295,3 +295,267 @@ This project follows these development principles:
 2. **Size Limitations**: JavaScript files are kept under 200 lines for maintainability
 3. **No Magic Values**: Constants are used instead of hardcoded values
 4. **Documentation**: Comprehensive comments explain what the code does
+
+
+## Configuration OCI API Gateway
+This application interacts with an OCI API Gateway that does token validation and forwards the request to the configured backend - JSON files on OCI Object Storage (accessible via Pre Authenticated Request). Two deployments are used
+* regular - for read only access to main data file and user specific delta file and to create/update the user specific delta file
+* admin - for read access to all delta files and write access to main data file and user specific delta files
+
+  oci api-gateway deployment get   --deployment-id ocid1.apideployment.oc1.eu-amsterdam-1.amaaaaaaq3px4vqaee2etqfmv4vkivhoakaw3zdm2y5beoaqz24dpnxx6moa   --query "data.specification"   --raw-output > deployment-spec.json
+
+
+### Deployment specification for non-admin API gateway:
+
+As described in article [No Code challenge: create file named after user in OCI Bucket through OCI API Gateway](https://medium.com/@lucasjellema/no-code-challenge-create-file-named-after-user-in-oci-bucket-through-oci-api-gateway-646270ab3b33)
+```
+{
+  "logging-policies": {
+    "access-log": null,
+    "execution-log": {
+      "is-enabled": null,
+      "log-level": "INFO"
+    }
+  },
+  "request-policies": {
+    "authentication": {
+      "audiences": [
+        "c0461816-7078-466b-9329-6be5824c82dd"
+      ],
+      "is-anonymous-access-allowed": false,
+      "issuers": [
+        "https://login.microsoftonline.com/21429da9-e4ad-45f9-9a6f-cd126a64274b/v2.0"
+      ],
+      "max-clock-skew-in-seconds": null,
+      "public-keys": {
+        "is-ssl-verify-disabled": null,
+        "max-cache-duration-in-hours": 1,
+        "type": "REMOTE_JWKS",
+        "uri": "https://login.microsoftonline.com/21429da9-e4ad-45f9-9a6f-cd126a64274b/discovery/v2.0/keys"
+      },
+      "token-auth-scheme": "Bearer",
+      "token-header": "Authorization",
+      "token-query-param": null,
+      "type": "JWT_AUTHENTICATION",
+      "verify-claims": null
+    },
+    "cors": {
+      "allowed-headers": [
+        "Authorization",
+        "Content-Type"
+      ],
+      "allowed-methods": [
+        "*"
+      ],
+      "allowed-origins": [
+        "http://localhost:5501",
+        "https://lucasjellema.github.io"
+      ],
+      "exposed-headers": [],
+      "is-allow-credentials-enabled": true,
+      "max-age-in-seconds": 1000
+    },
+    "dynamic-authentication": null,
+    "mutual-tls": {
+      "allowed-sans": [],
+      "is-verified-certificate-required": false
+    },
+    "rate-limiting": null,
+    "usage-plans": null
+  },
+  "routes": [
+    {
+      "backend": {
+        "connect-timeout-in-seconds": 60.0,
+        "is-ssl-verify-disabled": false,
+        "read-timeout-in-seconds": 10.0,
+        "send-timeout-in-seconds": 10.0,
+        "type": "HTTP_BACKEND",
+        "url": "https://idf2hanz.objectstorage.us-ashburn-1.oci.customer-oci.com/p/G8wAK_uS-uBdSUWKsX8/n/2hanz/b/laptop-extension-drive/o/conclusion-assets/Sprekerpool.json"
+      },
+      "logging-policies": {
+        "access-log": null,
+        "execution-log": {
+          "is-enabled": null,
+          "log-level": "INFO"
+        }
+      },
+      "methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ],
+      "path": "/speakerpool-data",
+      "request-policies": {
+        "authorization": {
+          "type": "AUTHENTICATION_ONLY"
+        },
+        "body-validation": null,
+        "cors": null,
+        "header-transformations": null,
+        "header-validations": null,
+        "query-parameter-transformations": null,
+        "query-parameter-validations": null,
+        "response-cache-lookup": null
+      },
+      "response-policies": {
+        "header-transformations": null,
+        "response-cache-store": null
+      }
+    },
+    {
+      "backend": {
+        "connect-timeout-in-seconds": 60.0,
+        "is-ssl-verify-disabled": false,
+        "read-timeout-in-seconds": 10.0,
+        "send-timeout-in-seconds": 10.0,
+        "type": "HTTP_BACKEND",
+        "url": "https://f2hanz.objectstorage.us-ashburn-1.oci.customer-oci.com/p/1EJ9RMVL5l5EQnFCI_V9b5/n/f2hanz/b/laptop-extension-drive/o/conclusion-assets/deltas/${request.auth[name]}"
+      },
+      "logging-policies": {
+        "access-log": null,
+        "execution-log": {
+          "is-enabled": null,
+          "log-level": "INFO"
+        }
+      },
+      "methods": [
+        "GET",
+        "POST",
+        "HEAD",
+        "OPTIONS",
+        "PUT"
+      ],
+      "path": "/speakerpool-delta",
+      "request-policies": {
+        "authorization": {
+          "type": "AUTHENTICATION_ONLY"
+        },
+        "body-validation": null,
+        "cors": null,
+        "header-transformations": null,
+        "header-validations": null,
+        "query-parameter-transformations": null,
+        "query-parameter-validations": null,
+        "response-cache-lookup": null
+      },
+      "response-policies": {
+        "header-transformations": null,
+        "response-cache-store": null
+      }
+    }
+  ]
+}
+```
+  
+
+  ### Deployment specification for admin API gateway:
+
+
+  
+	```
+{
+  "logging-policies": {
+    "access-log": null,
+    "execution-log": {
+      "is-enabled": null,
+      "log-level": "INFO"
+    }
+  },
+  "request-policies": {
+    "authentication": {
+      "audiences": [
+        "c0461816-7078-466b-9329-6be5824c82dd"
+      ],
+      "is-anonymous-access-allowed": false,
+      "issuers": [
+        "https://login.microsoftonline.com/21429da9-e4ad-45f9-9a6f-cd126a64274b/v2.0"
+      ],
+      "max-clock-skew-in-seconds": null,
+      "public-keys": {
+        "is-ssl-verify-disabled": null,
+        "max-cache-duration-in-hours": 1,
+        "type": "REMOTE_JWKS",
+        "uri": "https://login.microsoftonline.com/21429da9-e4ad-45f9-9a6f-cd126a64274b/discovery/v2.0/keys"
+      },
+      "token-auth-scheme": "Bearer",
+      "token-header": "Authorization",
+      "token-query-param": null,
+      "type": "JWT_AUTHENTICATION",
+      "verify-claims": [
+        {
+          "is-required": true,
+          "key": "preferred_username",
+          "values": [
+            "Lucas.Jellema@amis.nl"
+          ]
+        }
+      ]
+    },
+    "cors": {
+      "allowed-headers": [
+        "Authorization",
+        "Content-Type",
+        "Asset-Path"
+      ],
+      "allowed-methods": [
+        "*"
+      ],
+      "allowed-origins": [
+        "https://lucasjellema.github.io",
+        "http://localhost:5501"
+      ],
+      "exposed-headers": [],
+      "is-allow-credentials-enabled": true,
+      "max-age-in-seconds": 0
+    },
+    "dynamic-authentication": null,
+    "mutual-tls": {
+      "allowed-sans": [],
+      "is-verified-certificate-required": false
+    },
+    "rate-limiting": null,
+    "usage-plans": null
+  },
+  "routes": [
+    {
+      "backend": {
+        "connect-timeout-in-seconds": 60.0,
+        "is-ssl-verify-disabled": false,
+        "read-timeout-in-seconds": 10.0,
+        "send-timeout-in-seconds": 10.0,
+        "type": "HTTP_BACKEND",
+        "url": "https://hanz.objectstorage.us-ashburn-1.oci.customer-oci.com/p/ggMwtR4/n/hanz/b/laptop-extension-drive/o/${request.headers[Asset-Path]}"
+      },
+      "logging-policies": {
+        "access-log": null,
+        "execution-log": {
+          "is-enabled": null,
+          "log-level": null
+        }
+      },
+      "methods": [
+        "ANY"
+      ],
+      "path": "/speakerpool-admin",
+      "request-policies": {
+        "authorization": {
+          "type": "AUTHENTICATION_ONLY"
+        },
+        "body-validation": null,
+        "cors": null,
+        "header-transformations": null,
+        "header-validations": null,
+        "query-parameter-transformations": null,
+        "query-parameter-validations": null,
+        "response-cache-lookup": null
+      },
+      "response-policies": {
+        "header-transformations": null,
+        "response-cache-store": null
+      }
+    }
+  ]
+}	
+	```
+    
